@@ -54,8 +54,8 @@ class Database:
                 (user_id, exercise_name),
             ) as cursor:
                 row = await cursor.fetchone()
-                if row and row[0] is not None:  # type: ignore
-                    return int(row[0])  # type: ignore
+                if row and row[0] is not None:
+                    return int(row[0])
                 return 0
 
     async def get_all_stats(self, user_id):

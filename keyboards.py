@@ -1,7 +1,7 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 
-def get_exercises_kb():
+def get_main_kb():
     kb = [
         [KeyboardButton(text="Отжимания "), KeyboardButton(text="Приседания ")],
         [KeyboardButton(text="Подтягивания "), KeyboardButton(text="Статистика")],
