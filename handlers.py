@@ -120,6 +120,11 @@ async def add_value(message: Message, db: Database):
 
         exercise = parts[0].capitalize()
         count = int(parts[1])
+        if count > 300:
+            message.answer(
+                "Ничего себе! Но давай будем честными, введи реальное число."
+            )
+            return
 
         await db.add_exercise(message.from_user.id, exercise, count)
         total = await db.get_total_reps(message.from_user.id, exercise)
