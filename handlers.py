@@ -1,11 +1,12 @@
 from aiogram import Router, F
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
+from aiogram.filters.callback_data import CallbackData
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from states import TrainingStates
 
 from database import Database
-from keyboards import get_main_kb
+from keyboards import get_main_kb, get_undo_kb
 
 router = Router()
 
@@ -30,6 +31,7 @@ async def start(message: Message, db: Database):
 
 @router.message(F.text.lower() == "статистика")
 async def show_stats(message: Message, db: Database):
+    """Выводит суммарную статистику по всем упражнениям пользователя."""
     print("Хендлер статистики сработал!")
     if not message.from_user:
         return
@@ -47,6 +49,7 @@ async def show_stats(message: Message, db: Database):
 
 @router.message(F.text.in_(["Отжимания", "Приседания", "Подтягивания"]))
 async def start_fsm(message: Message, state: FSMContext):
+    """Начинает сценарий записи упражнения через кнопку, запрашивая количество."""
     await state.update_data(chosen_exercise=message.text)
 
     await state.set_state(TrainingStates.waiting_for_count)
@@ -57,6 +60,7 @@ async def start_fsm(message: Message, state: FSMContext):
 
 @router.message(TrainingStates.waiting_for_count)
 async def process_count(message: Message, state: FSMContext, db: Database):
+    """Принимает число повторений и сохраняет их в базу данных."""
     if not message.text or not message.from_user:
         return
     if not message.text.isdigit():
@@ -71,8 +75,35 @@ async def process_count(message: Message, state: FSMContext, db: Database):
     total = await db.get_total_reps(message.from_user.id, exercise)
 
     await message.answer(
-        f"Записал {count} ({exercise}). \nВсего: <b>{total}</b>", parse_mode="HTML"
+        f"Записал {count} ({exercise}). \nВсего: <b>{total}</b>",
+        parse_mode="HTML",
+        reply_markup=get_undo_kb(),
     )
+
+    await state.clear()
+
+
+@router.message(Command("delete"))
+async def delete_all_reps(message: Message, state: FSMContext):
+    """Инициирует процесс полной очистки данных пользователя с подтверждением."""
+    await state.set_state(TrainingStates.waiting_for_delete_confirm)
+    await message.answer(
+        "❗ Внимание! Вы собираетесь удалить ВСЮ историю тренировок.\n"
+        "После подтверждения это действие уже невозможно отменить.\n\n"
+        "Для подтверждения напишите слово <b>УДАЛИТЬ</b> (капсом) или для отмены нажмите /cancel",
+        parse_mode="HTML",
+    )
+
+
+@router.message(TrainingStates.waiting_for_delete_confirm)
+async def process_delete_confirm(message: Message, state: FSMContext, db: Database):
+    if not message.from_user:
+        return
+    if message.text == "УДАЛИТЬ":
+        await db.clear_all_user_data(message.from_user.id)
+        await message.answer("💥 Все ваши данные были безвозвратно удалены.")
+    else:
+        await message.answer("🛡️ Удаление отменено. Данные в безопасности.")
 
     await state.clear()
 
@@ -97,6 +128,19 @@ async def add_value(message: Message, db: Database):
             f"Записал: {count} ({exercise}). Молодец!\n"
             f"Твой суммарный результат: <b>{total}</b>",
             parse_mode="HTML",
+            reply_markup=get_undo_kb(),
         )
     except (ValueError, IndexError):
         pass
+
+
+@router.callback_query(F.data == "undo_last")
+async def delete_rep(callback: CallbackQuery, db: Database):
+    """Обрабатывает нажатие inline-кнопки для отмены последней записи."""
+    if isinstance(callback.message, Message):
+        await db.delete_newer_rep(callback.from_user.id)
+
+        await callback.answer("Удалено")
+        await callback.message.edit_text("✅ Последняя запись успешно удалена.")
+    else:
+        await callback.answer("Ошибка: сообщение устарело", show_alert=True)

@@ -6,6 +6,9 @@ class Database:
         self.db_path = db_path
 
     async def create_tables(self):
+        """
+        Создает таблицы users и trainings в базе данных.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 """
@@ -32,6 +35,9 @@ class Database:
             await db.commit()
 
     async def register_user(self, user_id, username, first_name):
+        """
+        Регистрирует пользователей добавляя параметры user_id, username, first_name в таблицу users.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)",
@@ -40,6 +46,9 @@ class Database:
             await db.commit()
 
     async def add_exercise(self, user_id, name, value):
+        """
+        Добавляет новую строку в таблице с параметрами user_id, name, value в таблицу training.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
                 "INSERT INTO training (user_id, exercise_name, value) VALUES (?, ?, ?)",
@@ -48,6 +57,9 @@ class Database:
             await db.commit()
 
     async def get_total_reps(self, user_id, exercise_name):
+        """
+        Возвращает сумму всех значений пользователя, где значения exercise_name равны.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             async with db.execute(
                 "SELECT SUM(value) FROM training WHERE user_id = ? AND exercise_name = ?",
@@ -59,9 +71,33 @@ class Database:
                 return 0
 
     async def get_all_stats(self, user_id):
+        """
+        Возвращает сумму всех значений пользователя по столбцам exercise_name в виде списка кортежей.
+        """
         async with aiosqlite.connect(self.db_path) as db:
             async with db.execute(
                 "SELECT exercise_name, SUM(value) FROM training WHERE user_id = ? GROUP BY exercise_name",
                 (user_id,),
             ) as cursor:
                 return await cursor.fetchall()
+
+    async def delete_newer_rep(self, user_id):
+        """
+        Удаляет последнюю добавленную запись пользователя из таблицы training.
+        Используется для функции 'Undo' (отмена).
+        """
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute(
+                "DELETE FROM training WHERE id = (SELECT MAX(id) FROM training WHERE user_id = ?)",
+                (user_id,),
+            )
+            await db.commit()
+
+    async def clear_all_user_data(self, user_id):
+        """
+        Удаляет все добавленные записи пользователся из таблицы training.
+        Используется для функции "/delete" (удалить)
+        """
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("DELETE FROM training WHERE user_id = ?", (user_id,))
+            await db.commit()
