@@ -108,6 +108,24 @@ async def process_delete_confirm(message: Message, state: FSMContext, db: Databa
     await state.clear()
 
 
+@router.message(F.text.lower() == "топ-5")
+async def show_top(message: Message, db: Database):
+    top_list = await db.get_top_users()
+
+    if not top_list:
+        await message.answer("Список лидеров пока пуст!")
+        return
+
+    text = "<b>🏆 Топ-5 атлетов:</b>\n\n"
+    medals = ["🥇", "🥈", "🥉", "👤", "👤"]
+
+    for i, (name, total) in enumerate(top_list):
+        medal = medals[i] if i < len(medals) else "👤"
+        text += f"{medal} {name} - <b>{total}</b> повт.\n"
+
+    await message.answer(text, parse_mode="HTML")
+
+
 @router.message(F.text)
 async def add_value(message: Message, db: Database):
     if not message.text or not message.from_user:

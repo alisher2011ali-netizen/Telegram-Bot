@@ -10,6 +10,7 @@ def get_main_kb():
     kb = [
         [KeyboardButton(text="Отжимания "), KeyboardButton(text="Приседания ")],
         [KeyboardButton(text="Подтягивания "), KeyboardButton(text="Статистика")],
+        [KeyboardButton(text="Топ-5")],
     ]
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
 

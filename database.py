@@ -101,3 +101,15 @@ class Database:
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("DELETE FROM training WHERE user_id = ?", (user_id,))
             await db.commit()
+
+    async def get_top_users(self):
+        async with aiosqlite.connect(self.db_path) as db:
+            async with db.execute(
+                """SELECT u.first_name, SUM(t.value) as total_score
+            FROM training t
+            JOIN users u ON t.user_id = u.user_id
+            GROUP BY t.user_id
+            ORDER BY total_score DESC, u.user_id ASC
+            LIMIT 5"""
+            ) as cursor:
+                return await cursor.fetchall()
