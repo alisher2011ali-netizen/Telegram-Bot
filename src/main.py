@@ -1,0 +1,48 @@
+from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand
+from aiogram.fsm.storage.redis import RedisStorage
+from redis.asyncio import Redis
+import asyncio
+import os
+from dotenv import load_dotenv
+
+from handlers.user_handlers import router as user_router
+
+load_dotenv()
+
+redis = Redis(
+    host=os.getenv("REDIS_HOST", "localhost"),
+    port=int(os.getenv("REDIS_PORT", 6379)),
+    db=0,
+)
+
+storage = RedisStorage(redis)
+
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+
+if TOKEN is None:
+    raise ValueError("Токен TELEGRAM_BOT_TOKEN не найден в переменных окружения.")
+
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
+
+
+async def set_main_menu(bot: Bot):
+    main_menu_commands = [
+        BotCommand(command="/start", description="Запустить бота"),
+        BotCommand(command="/new", description="🗑 Очистить контекст"),
+    ]
+    await bot.set_my_commands(main_menu_commands)
+
+
+async def main():
+    await set_main_menu(bot)
+
+    dp.include_router(user_router)
+
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
