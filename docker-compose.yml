@@ -3,7 +3,7 @@ version: '3.8'
 services:
   db:
     image: postgres:15
-    container_name: bot_redis
+    container_name: new_bot_db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -17,14 +17,17 @@ services:
     container_name: bot_redis
     restart: always
     ports:
-      -"6379:6379"
+      - "6379:6379"
   
   bot:
     build: .
-    container_name: tg_bot
+    container_name: new_tg_bot
     restart: always
     depends_on:
       - db
       - redis
     env_file:
       - .env
+
+volumes:
+  pgdata:
