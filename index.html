@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Interface</title>
+</head>
+<body>
+    <h1>Спроси Gigachat через API</h1>
+    <input type="text" id="userInput" placeholder="Введите вопрос...">
+    <button onclick="sendToApi()">Отправить</button>
+    <p id="response"></p>
+
+    <script>
+        async function sendToApi() {
+            const text = document.getElementById('userInput').value;
+            const responseElement = document.getElementById('response');
+
+            try {
+                const res = await fetch('http://127.0.0.1:8000/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+
+                const data = await res.json();
+                responseElement.innerText = data.answer;
+            } catch (error) {
+                responseElement.innerText = "Ошибка: API не отвечает. Запусти его в WSL!";
+            }
+        }
+    </script>
+</body>
+</html>
